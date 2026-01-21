@@ -1,0 +1,69 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Generate documentation
+        run: |
+          mkdir -p docs/site
+          
+          # Create landing page that links to pkg.go.dev
+          cat > docs/site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>hamsign - Go Documentation</title>
+            <meta http-equiv="refresh" content="0; url=https://pkg.go.dev/github.com/radiolabme/hamsign">
+            <link rel="canonical" href="https://pkg.go.dev/github.com/radiolabme/hamsign">
+          </head>
+          <body>
+            <p>Redirecting to <a href="https://pkg.go.dev/github.com/radiolabme/hamsign">hamsign documentation on pkg.go.dev</a>...</p>
+          </body>
+          </html>
+          EOF
+          
+          echo "Documentation redirect page created"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

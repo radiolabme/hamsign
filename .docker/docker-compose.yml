@@ -1,0 +1,89 @@
+services:
+  # Development environment with hot reload
+  dev:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile
+      target: dev
+    volumes:
+      - ..:/workspace:cached
+      - go-mod-cache:/go/pkg/mod # Cache Go modules
+      - go-build-cache:/root/.cache/go-build # Cache build artifacts
+    working_dir: /workspace
+    command: ["sh", "-c", "go mod download && make test-watch"]
+    networks:
+      - hamsign-net
+
+  # CI testing - runs lint, vet, and tests
+  ci:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile
+      target: ci
+    volumes:
+      - ..:/workspace:cached
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    working_dir: /workspace
+    environment:
+      - CI=true
+      - CGO_ENABLED=0
+    command: ["make", "ci"]
+    networks:
+      - hamsign-net
+
+  # Build all platforms
+  build:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile
+      target: builder-base
+    volumes:
+      - ..:/workspace:cached
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+      - ../dist:/workspace/dist
+    working_dir: /workspace
+    environment:
+      - CGO_ENABLED=0
+    command: ["make", "build-all"]
+    networks:
+      - hamsign-net
+
+  # Run tests with coverage
+  test:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile
+      target: ci
+    volumes:
+      - ..:/workspace:cached
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    working_dir: /workspace
+    command: ["make", "test-coverage"]
+    networks:
+      - hamsign-net
+
+  # Lint the codebase
+  lint:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile
+      target: ci
+    volumes:
+      - ..:/workspace:cached
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    working_dir: /workspace
+    command: ["make", "lint"]
+    networks:
+      - hamsign-net
+
+volumes:
+  go-mod-cache:
+  go-build-cache:
+
+networks:
+  hamsign-net:
+    driver: bridge

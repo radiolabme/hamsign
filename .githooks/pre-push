@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# Pre-push hook for hamsign
+# Runs full CI checks before push.
+#
+# Install with: make install-hooks
+# Or manually: cp .githooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+
+set -e
+
+echo "🔍 Running pre-push checks..."
+
+# Check if Go is available
+if ! command -v go >/dev/null 2>&1; then
+    echo "⚠️  Go not found - use 'make docker-ci' to validate"
+    exit 1
+fi
+
+# Run full CI checks
+echo "  Running full CI pipeline..."
+make ci || {
+    echo "❌ CI checks failed"
+    echo ""
+    echo "Fix the issues above before pushing."
+    echo "You can also run 'make docker-ci' if you don't have tools installed."
+    exit 1
+}
+
+echo "✓ Pre-push checks passed"

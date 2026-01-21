@@ -1,0 +1,20 @@
+# Pre-commit hooks for hamsign
+# https://pre-commit.com/
+#
+# Install: brew install pre-commit && pre-commit install --hook-type pre-push
+
+repos:
+  # Go formatting and linting
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+      - id: go-vet
+      - id: go-mod-tidy
+
+  # Homebrew formula validation from tap
+  - repo: https://github.com/radiolabme/homebrew-tap
+    rev: main
+    hooks:
+      - id: validate-formula
+        stages: [pre-push]

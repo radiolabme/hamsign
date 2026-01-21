@@ -1,0 +1,10 @@
+# Ignore personal TQSL certificate data
+# These directories contain real certificate data used for integration testing
+2025/
+2026/
+
+# Keep synthetic test data (programmatically generated)
+!synthetic/
+
+# Ignore macOS metadata
+.DS_Store

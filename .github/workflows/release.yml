@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  homebrew:
+    name: Update Homebrew Tap
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          repository: radiolabme/homebrew-tap
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          cd homebrew-tap
+
+          # Download release artifacts to get checksums
+          for os in darwin linux; do
+            for arch in amd64 arm64; do
+              curl -sLO "https://github.com/radiolabme/hamsign/releases/download/v${VERSION}/hamsign-example-${os}-${arch}.tar.gz"
+            done
+          done
+
+          # Generate formula (this is a simplified version - adjust as needed)
+          cat > Formula/hamsign.rb << 'EOF'
+          class Hamsign < Formula
+            desc "Amateur radio digital signing library and tools"
+            homepage "https://github.com/radiolabme/hamsign"
+            version "${VERSION}"
+            license "BSD-3-Clause"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/radiolabme/hamsign/releases/download/v${VERSION}/hamsign-example-darwin-arm64.tar.gz"
+                sha256 "$(sha256sum hamsign-example-darwin-arm64.tar.gz | cut -d' ' -f1)"
+              else
+                url "https://github.com/radiolabme/hamsign/releases/download/v${VERSION}/hamsign-example-darwin-amd64.tar.gz"
+                sha256 "$(sha256sum hamsign-example-darwin-amd64.tar.gz | cut -d' ' -f1)"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/radiolabme/hamsign/releases/download/v${VERSION}/hamsign-example-linux-arm64.tar.gz"
+                sha256 "$(sha256sum hamsign-example-linux-arm64.tar.gz | cut -d' ' -f1)"
+              else
+                url "https://github.com/radiolabme/hamsign/releases/download/v${VERSION}/hamsign-example-linux-amd64.tar.gz"
+                sha256 "$(sha256sum hamsign-example-linux-amd64.tar.gz | cut -d' ' -f1)"
+              end
+            end
+
+            def install
+              bin.install "hamsign-example"
+            end
+
+            test do
+              system "#{bin}/hamsign-example", "--version"
+            end
+          end
+          EOF
+
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add Formula/hamsign.rb
+          git commit -m "Update hamsign to ${GITHUB_REF_NAME}" || echo "No changes"
+          git push
+        continue-on-error: true

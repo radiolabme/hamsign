@@ -1,0 +1,199 @@
+# GoReleaser configuration for hamsign
+# https://goreleaser.com/customization/
+
+version: 2
+
+project_name: hamsign
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  # Build each example command separately
+  - id: loadcert
+    main: ./example/loadcert
+    binary: loadcert
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      # ARM builds only for Linux (Raspberry Pi)
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    flags:
+      - -trimpath
+
+  - id: signdata
+    main: ./example/signdata
+    binary: signdata
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    flags:
+      - -trimpath
+
+  - id: verifycert
+    main: ./example/verifycert
+    binary: verifycert
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    flags:
+      - -trimpath
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}aarch64
+      {{- else if eq .Arch "arm" }}armv{{ .Arm }}
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+      - example/README.md
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Other
+      order: 999
+
+release:
+  github:
+    owner: radiolabme
+    name: hamsign
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  header: |
+    ## hamsign v{{.Version}}
+    
+    Go library for amateur radio digital signing and certificate management.
+    
+    ### Installation
+    
+    **As a library:**
+    ```bash
+    go get github.com/radiolabme/hamsign@v{{.Version}}
+    ```
+    
+    **CLI tools (Homebrew):**
+    ```bash
+    brew tap radiolabme/tap
+    brew install hamsign
+    ```
+    
+    **Manual download:** See assets below.
+
+# Homebrew tap configuration
+# Requires: radiolabme/homebrew-tap repository with HOMEBREW_TAP_TOKEN secret
+brews:
+  - name: hamsign
+    ids:
+      - default
+    repository:
+      owner: radiolabme
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/radiolabme/hamsign"
+    description: "CLI tools for amateur radio digital signing and certificate management"
+    license: "BSD-3-Clause"
+    install: |
+      bin.install "loadcert"
+      bin.install "signdata"
+      bin.install "verifycert"
+    test: |
+      system "#{bin}/loadcert", "--help"

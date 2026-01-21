@@ -1,0 +1,70 @@
+# Go build outputs
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+coverage.txt
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS-specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows-specific files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.p12
+!testdata/synthetic/*.p12
+
+# Personal test data (real certificates)
+testdata/2*/
+
+# Archives and backups
+_archive/
+
+# Build artifacts
+*.tar.gz
+*.zip
+
+# Debug files
+debug
+__debug_bin*
+
+# Profiling
+*.prof
+*.pprof
+
+# Local development
+.local/
+tmp/

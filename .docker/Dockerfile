@@ -6,7 +6,7 @@
 # =============================================================================
 # Stage 1: Builder base with all tools
 # =============================================================================
-FROM golang:1.21-bookworm AS builder-base
+FROM golang:1.25-bookworm AS builder-base
 
 WORKDIR /workspace
 
